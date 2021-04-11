@@ -27,26 +27,42 @@ def fetch_tracks(sp, item_type, url):
                                       additional_types=['track'], offset=offset)
             total_songs = items.get('total')
             for item in items['items']:
-                track_name = item['track']['name']
-                track_artist = ", ".join([artist['name'] for artist in item['track']['artists']])
-                track_album = item['track']['album']['name']
-                track_year = item['track']['album']['release_date'][:4]
-                album_total = item['track']['album']['total_tracks']
-                track_num = item['track']['track_number']
-                spotify_id = item['track']['id']
-                if len(item['track']['album']['images']) > 0:
-                    cover = item['track']['album']['images'][0]['url']
+                try:
+                    log.debug(item)
+                    track_name = item['track']['name']
+                    track_artist = ", ".join([artist['name'] for artist in item['track']['artists']])
+                    track_album = item['track']['album']['name']
+                    if item['track']['album']['release_date'] != None:
+                        track_year = item['track']['album']['release_date'][:4]
+                    else:
+                        track_year = 9999
+
+                    if 'total_tracks' in item['track']['album'] and item['track']['album']['total_tracks'] != None:
+                        album_total = item['track']['album']['total_tracks']
+                    else:
+                        album_total = 0
+                    
+                    track_num = item['track']['track_number']
+                    spotify_id = item['track']['id']
+                    if len(item['track']['album']['images']) > 0:
+                        cover = item['track']['album']['images'][0]['url']
+                    else:
+                        cover = None
+                
+                    if len(sp.artist(artist_id=item['track']['artists'][0]['uri'])['genres']) > 0:
+                        genre = sp.artist(artist_id=item['track']['artists'][0]['uri'])['genres'][0]
+                    else:
+                        genre = ""
+                    
+                except AttributeError as error:
+                    log.info('Skiping song due attrib errors:'+ track_name)
+                    continue
                 else:
-                    cover = None
-            
-                if len(sp.artist(artist_id=item['track']['artists'][0]['uri'])['genres']) > 0:
-                    genre = sp.artist(artist_id=item['track']['artists'][0]['uri'])['genres'][0]
-                else:
-                    genre = ""
-                songs_list.append({"name": track_name, "artist": track_artist, "album": track_album, "year": track_year,
-                                   "num_tracks": album_total, "num": track_num, "playlist_num": offset + 1,
-                                   "cover": cover, "genre": genre, "spotify_id": spotify_id})
-                offset += 1
+                    songs_list.append({"name": track_name, "artist": track_artist, "album": track_album, "year": track_year,
+                                        "num_tracks": album_total, "num": track_num, "playlist_num": offset + 1,
+                                        "cover": cover, "genre": genre, "spotify_id": spotify_id})
+                    offset += 1
+
 
             log.info(f"Fetched {offset}/{total_songs} songs in the playlist")
             if total_songs == offset:
@@ -149,9 +165,9 @@ def validate_spotify_url(url):
     item_type, item_id = parse_spotify_url(url)
     log.debug(f"Got item type {item_type} and item_id {item_id}")
     if item_type not in ['album', 'track', 'playlist']:
-        log.info("Only albums/tracks/playlists are supported")
+        log.error("Only albums/tracks/playlists are supported")
         return False
     if item_id is None:
-        log.info("Couldn't get a valid id")
+        log.error("Couldn't get a valid id")
         return False
     return True
