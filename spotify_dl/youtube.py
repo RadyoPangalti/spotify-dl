@@ -1,6 +1,7 @@
 import urllib.request
 from os import path
 
+
 import mutagen
 import youtube_dl
 from mutagen.easyid3 import EasyID3
@@ -64,6 +65,13 @@ def download_songs(songs, download_directory, format_string, skip_mp3,
                 log.debug(e)
                 print('Failed to download: {}, please ensure YouTubeDL is up-to-date. '.format(query))
                 continue
+            
+            if not path.isfile(file_path+'.mp3'):
+                # issue 1
+                log.info('Path not found:'+file_path+'.mp3')
+                log.info('Skipping file...')
+                continue
+
 
         if not skip_mp3:
             try:
